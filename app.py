@@ -1,8 +1,35 @@
 import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 from mssql_python import connect
 
 app = Flask(__name__)
+# Habilitar CORS para permitir peticiones desde tu WordPress
+CORS(app)
+
+
+def enviar_correo_alerta(asunto, mensaje, destino):
+    remitente = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASS")
+
+    if not remitente or not password:
+        raise ValueError("Faltan credenciales de correo (EMAIL_USER o EMAIL_PASS) en las variables de entorno")
+
+    msg = MIMEMultipart()
+    msg['From'] = remitente
+    msg['To'] = destino
+    msg['Subject'] = asunto
+    msg.attach(MIMEText(mensaje, 'plain'))
+
+    # Conexión al servidor SMTP (Configurado para Gmail)
+    servidor = smtplib.SMTP('smtp.gmail.com', 587)
+    servidor.starttls()
+    servidor.login(remitente, password)
+    servidor.send_message(msg)
+    servidor.quit()
 
 
 def get_connection():
