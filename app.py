@@ -24,9 +24,8 @@ def enviar_correo_alerta(asunto, mensaje, destino):
     msg['Subject'] = asunto
     msg.attach(MIMEText(mensaje, 'plain'))
 
-    # Conexión al servidor SMTP (Configurado para Gmail)
-    servidor = smtplib.SMTP('smtp.gmail.com', 587)
-    servidor.starttls()
+    # Conexión al servidor SMTP (Configurado para Gmail con SSL nativo en el puerto 465)
+    servidor = smtplib.SMTP_SSL('smtp.gmail.com', 465)
     servidor.login(remitente, password)
     servidor.send_message(msg)
     servidor.quit()
