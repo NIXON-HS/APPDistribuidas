@@ -1,7 +1,5 @@
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import resend
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from mssql_python import connect
@@ -12,23 +10,27 @@ CORS(app)
 
 
 def enviar_correo_alerta(asunto, mensaje, destino):
-    remitente = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASS")
+    # Obtener la llave de Resend desde Render
+    api_key = os.getenv("RESEND_API_KEY")
+    
+    if not api_key:
+        raise ValueError("Falta la variable RESEND_API_KEY en el entorno")
 
-    if not remitente or not password:
-        raise ValueError("Faltan credenciales de correo (EMAIL_USER o EMAIL_PASS) en las variables de entorno")
+    resend.api_key = api_key
 
-    msg = MIMEMultipart()
-    msg['From'] = remitente
-    msg['To'] = destino
-    msg['Subject'] = asunto
-    msg.attach(MIMEText(mensaje, 'plain'))
+    # Parámetros del correo usando Resend
+    params = {
+        "from": "Acme <onboarding@resend.dev>", # Este remitente es obligatorio en el modo prueba de Resend
+        "to": [destino], # En modo prueba, este destino DEBE ser tu propio correo registrado
+        "subject": asunto,
+        "text": mensaje,
+    }
 
-    # Conexión al servidor SMTP (Configurado para Gmail con SSL nativo en el puerto 465)
-    servidor = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-    servidor.login(remitente, password)
-    servidor.send_message(msg)
-    servidor.quit()
+    # Enviar el correo
+    try:
+        resend.Emails.send(params)
+    except Exception as e:
+        raise Exception(f"Error al enviar con Resend: {str(e)}")
 
 
 def get_connection():
@@ -76,6 +78,7 @@ def debug_env():
         "DB_USERNAME": os.getenv("DB_USERNAME"),
         "DB_PASSWORD_EXISTS": bool(os.getenv("DB_PASSWORD")),
         "DB_PORT": os.getenv("DB_PORT"),
+        "RESEND_KEY_EXISTS": bool(os.getenv("RESEND_API_KEY"))
     })
 
 
